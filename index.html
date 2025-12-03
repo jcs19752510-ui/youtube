@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유튜브 대본 편집기</title>
+    <style>
+        /* 기본 레이아웃 스타일 - 최소한의 디자인 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* 입력 영역 */
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        /* 버튼 영역 */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #0b7dda;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+
+        .btn-info {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #e68900;
+        }
+
+        /* 결과 영역 */
+        #result {
+            min-height: 200px;
+            padding: 20px;
+            background-color: #fafafa;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        #result:empty:before {
+            content: "정리된 대본이 여기에 표시됩니다...";
+            color: #999;
+        }
+
+        /* 문단 스타일 */
+        .paragraph {
+            margin-bottom: 20px;
+        }
+
+        /* 알림 메시지 */
+        .message {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 600px) {
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 유튜브 대본 편집기</h1>
+
+    <!-- 입력 영역 -->
+    <div class="container">
+        <h2>1. 유튜브 대본 입력</h2>
+        <textarea id="scriptInput" placeholder="여기에 유튜브 대본을 붙여넣으세요..."></textarea>
+        
+        <!-- 버튼 그룹 -->
+        <div class="button-group">
+            <button class="btn-primary" onclick="formatScript()">📄 문단 정리하기</button>
+            <button class="btn-secondary" onclick="copyResult()">📋 결과 복사하기</button>
+            <button class="btn-info" onclick="saveScript()">💾 저장하기</button>
+            <button class="btn-danger" onclick="clearAll()">🗑️ 초기화</button>
+        </div>
+
+        <!-- 알림 메시지 -->
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- 결과 영역 -->
+    <div class="container">
+        <h2>2. 정리된 대본</h2>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // ========================================
+        // 페이지 로드 시 저장된 데이터 불러오기
+        // ========================================
+        window.addEventListener('DOMContentLoaded', function() {
+            loadSavedScript();
+        });
+
+        // ========================================
+        // 핵심 기능: 대본 문단 정리
+        // ========================================
+        function formatScript() {
+            const input = document.getElementById('scriptInput').value.trim();
+            const resultDiv = document.getElementById('result');
+
+            // 입력값 검증
+            if (!input) {
+                showMessage('대본을 입력해주세요!', 'error');
+                return;
+            }
+
+            // 1단계: 타임스탬프 제거 (예: [00:12], 0:34, 00:12:34 형식)
+            let cleaned = input.replace(/\[?\d{1,2}:\d{2}(?::\d{2})?\]?/g, '');
+
+            // 2단계: 연속된 공백 제거
+            cleaned = cleaned.replace(/\s+/g, ' ');
+
+            // 3단계: 문장 부호 뒤에 공백 추가 (문단 분리 준비)
+            cleaned = cleaned.replace(/([.!?])\s*/g, '$1 ');
+
+            // 4단계: 문장을 배열로 분리
+            const sentences = cleaned.split(/([.!?])\s+/).filter(s => s.trim());
+
+            // 5단계: 문장을 다시 합치면서 문단 생성 (2-3문장마다 문단 나누기)
+            let paragraphs = [];
+            let currentParagraph = '';
+            let sentenceCount = 0;
+
+            for (let i = 0; i < sentences.length; i++) {
+                currentParagraph += sentences[i];
+                
+                // 문장 종결 부호인 경우 카운트 증가
+                if (sentences[i].match(/[.!?]/)) {
+                    sentenceCount++;
+                    
+                    // 2-3문장마다 문단 나누기
+                    if (sentenceCount >= 2) {
+                        paragraphs.push(currentParagraph.trim());
+                        currentParagraph = '';
+                        sentenceCount = 0;
+                    }
+                }
+            }
+
+            // 남은 문장 추가
+            if (currentParagraph.trim()) {
+                paragraphs.push(currentParagraph.trim());
+            }
+
+            // 6단계: 결과 화면에 표시 (문단별로 줄바꿈)
+            const formattedText = paragraphs.join('\n\n');
+            resultDiv.textContent = formattedText;
+
+            // 성공 메시지
+            showMessage('대본이 성공적으로 정리되었습니다! ✅', 'success');
+
+            // 자동 저장
+            saveToLocalStorage(input, formattedText);
+        }
+
+        // ========================================
+        // 결과 복사 기능
+        // ========================================
+        function copyResult() {
+            const resultDiv = document.getElementById('result');
+            const text = resultDiv.textContent.trim();
+
+            if (!text || text === "정리된 대본이 여기에 표시됩니다...") {
+                showMessage('복사할 내용이 없습니다!', 'error');
+                return;
+            }
+
+            // 클립보드에 복사
+            navigator.clipboard.writeText(text).then(function() {
+                showMessage('클립보드에 복사되었습니다! 📋', 'success');
+            }).catch(function(err) {
+                // 구형 브라우저 대응 (대체 방법)
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showMessage('클립보드에 복사되었습니다! 📋', 'success');
+            });
+        }
+
+        // ========================================
+        // 저장 기능 (LocalStorage)
+        // ========================================
+        function saveScript() {
+            const input = document.getElementById('scriptInput').value.trim();
+            const result = document.getElementById('result').textContent.trim();
+
+            if (!input && !result) {
+                showMessage('저장할 내용이 없습니다!', 'error');
+                return;
+            }
+
+            saveToLocalStorage(input, result);
+            showMessage('브라우저에 저장되었습니다! 💾', 'success');
+        }
+
+        // LocalStorage에 저장
+        function saveToLocalStorage(input, result) {
+            const data = {
+                input: input,
+                result: result,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('youtubeScript', JSON.stringify(data));
+        }
+
+        // LocalStorage에서 불러오기
+        function loadSavedScript() {
+            const saved = localStorage.getItem('youtubeScript');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    document.getElementById('scriptInput').value = data.input || '';
+                    document.getElementById('result').textContent = data.result || '';
+                    
+                    if (data.input || data.result) {
+                        showMessage('이전에 작업하던 내용을 불러왔습니다! 📂', 'success');
+                    }
+                } catch (e) {
+                    console.error('데이터 불러오기 실패:', e);
+                }
+            }
+        }
+
+        // ========================================
+        // 초기화 기능
+        // ========================================
+        function clearAll() {
+            // 사용자 확인
+            if (!confirm('모든 내용을 지우시겠습니까?\n(저장된 데이터도 삭제됩니다)')) {
+                return;
+            }
+
+            // 입력창과 결과창 초기화
+            document.getElementById('scriptInput').value = '';
+            document.getElementById('result').textContent = '';
+
+            // LocalStorage 삭제
+            localStorage.removeItem('youtubeScript');
+
+            showMessage('모든 내용이 초기화되었습니다! 🗑️', 'success');
+        }
+
+        // ========================================
+        // 메시지 표시 함수
+        // ========================================
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+
+            // 3초 후 메시지 자동 숨김
+            setTimeout(function() {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // ========================================
+        // 키보드 단축키 (선택사항)
+        // ========================================
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + Enter: 문단 정리
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                formatScript();
+            }
+            // Ctrl + S: 저장
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveScript();
+            }
+        });
+    </script>
+</body>
+</html>
